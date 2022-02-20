@@ -32,8 +32,14 @@ client = ModbusSerialClient(
     bytesize=config['bytesize']
 )
 
-initializeDB(db_path,config)
+if not config['debug']:
+    initializeDB(db_path,config)
 
+def logError(message):
+    if config['debug']:
+        print(message)
+    else:
+        logging.error(message)
 
 while True:
     if client.connect():  # Trying for connect to Modbus Server/Slave
@@ -55,12 +61,14 @@ while True:
                     titles = ",".join(titles)
                     values = ",".join(values)       
                     query = f"insert into device{device['address']}({titles}) values({values})"                    
-                    conn.execute(query)
+                    if config['debug']:
+                        print(query)
+                    else:
+                        conn.execute(query)                        
             else:
-                logging.error(res)
-
+                logError(res)
     else:
-        logging.error('Cannot connect to the Modbus Server/Slave')
-    
+        logError('Cannot connect to the Modbus Server/Slave')    
+        
     sleep(config['polling_interval'])
 

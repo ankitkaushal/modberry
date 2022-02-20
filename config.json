@@ -1,11 +1,12 @@
 {
-    "port":"com1",
+    "port":"com6",
     "baudrate":9600,
     "timeout":3,
     "parity":"N",
     "stopbits":1,
     "bytesize":8,
     "polling_interval":30,
+    "debug":true,
     "devices":[
         {            
             "address":1,            
@@ -14,6 +15,6 @@
         {            
             "address":2,            
             "type":"inverter1"            
-        }
+        }           
     ]
 }
