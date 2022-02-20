@@ -5,6 +5,7 @@ from time import sleep
 import time
 import logging
 import sqlite3
+import azure.cosmos.cosmos_client as cosmos_client
 
 from initialize import initializeDB
 
@@ -35,6 +36,15 @@ client = ModbusSerialClient(
 if not config['debug']:
     initializeDB(db_path,config)
 
+    if config['remote']["enabled"]:
+        cosmosClient = cosmos_client.CosmosClient(config['remote']['host'],{'masterKey':config['remote']['key']},user_agent = "pi",user_agent_overwrite=True)
+        db = cosmosClient.get_database_client(config['remote']['db'])
+        container = db.get_container_client(config['remote']['container'])
+
+def createEntry(dbEntry):
+    container.create_item(body=dbEntry)
+
+
 def logError(message):
     if config['debug']:
         print(message)
@@ -58,17 +68,25 @@ while True:
                     for item in device_config["mapping"].items():
                         values.append( str(res.registers[int(item[0]) - device_config['start'] ]))
                         titles.append(item[1])                 
-                    titles = ",".join(titles)
-                    values = ",".join(values)       
-                    query = f"insert into device{device['address']}({titles}) values({values})"                    
+                    titlesStr = ",".join(titles)
+                    valuesStr = ",".join(values)       
+                    query = f"insert into device{device['address']}({titlesStr}) values({valuesStr})"                    
                     if config['debug']:
                         print(query)
                     else:
-                        conn.execute(query)                        
+                        conn.execute(query)
+                        if(config['remote']['enabled']):
+                            dbItem = dict(zip(titles,values))
+                            dbItem['deviceId'] = device['address']
+                            dbItem['siteId'] = config['site']
+                            dbItem['id'] = dbItem['siteId'] + str(dbItem['deviceId']) + str(dbItem['timestamp'])                            
+                            createEntry(dbItem)
+                        
+
             else:
                 logError(res)
     else:
         logError('Cannot connect to the Modbus Server/Slave')    
-        
+
     sleep(config['polling_interval'])
 
